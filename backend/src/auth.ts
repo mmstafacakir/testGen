@@ -1,4 +1,3 @@
-import { cli } from './cli';
 import { APIResponse, SecurityScheme, CLIArguments } from './interfaces';
 
 export async function getSecuritySchemes(api: APIResponse): Promise<Record<string, SecurityScheme> | undefined> {
@@ -60,16 +59,6 @@ export async function getSecuritySchemes(api: APIResponse): Promise<Record<strin
 //     //console.log("Generated Headers:", headers);
 //     return headers;
 // }
-
-export async function cliTokens() {
-    const cliArgs = await cli() as CLIArguments;
-    let authTokens = {
-        Bearer: cliArgs.Bearer ?? "",
-        apiKey: cliArgs.apiKey ?? "",
-        oAuth2: cliArgs.oauth2 ?? ""
-    };
-    return authTokens;
-}
 
 export function getAuthHeaders(securitySchemes: Record<string, SecurityScheme> | undefined, requiredSchemes: Array<Record<string, string[]>>, tokens: Record<string, string>): Record<string, string> {
     let headers: Record<string, string> = {};

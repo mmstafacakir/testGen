@@ -22,6 +22,8 @@
         <div class="buttons">
           <button @click="generateCode">Generate Code</button>
           <button @click="runTests">Run Tests</button>
+          <button @click="downloadCode">Download Code</button>
+          <button @click="downloadBoilerplate">Download Boilerplate</button>
           <label class="edit-toggle">
             <input type="checkbox" v-model="isEditable" /> Düzenle
           </label>
@@ -31,7 +33,7 @@
       <div class="editor-container">
         <monaco-editor
           v-model="generatedCode"
-          language="javascript"
+          language="typescript"
           theme="vs-dark"
           :options="{ readOnly: !isEditable }"
           class="code-editor"
@@ -48,6 +50,8 @@
 import MonacoEditor from "@guolao/vue-monaco-editor";
 import SwaggerParser from "swagger-parser";
 import yaml from "js-yaml";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 export default {
   components: {
@@ -140,21 +144,22 @@ export default {
         }
 
         const data = await response.json();
-        console.log('Generated code:', data.generatedCode);
         this.generatedCode = data.generatedCode;
       } catch (error) {
         console.error('Error generating code:', error);
+        this.errorMessage = "Kod oluşturulurken hata oluştu.";
       }
     },
     async runTests() {
       this.errorMessage = "";
+      this.testResults = "";  // Clear test results
+
       if (!this.generatedCode) {
-        this.errorMessage = "Lütfen önce kod oluşturun.";
+        this.errorMessage = "Lütfen kodu oluşturunuz.";
         return;
       }
 
-      console.log('Running tests...');
-      console.log('Generated code:', this.generatedCode);
+      console.log("Running tests with code:", this.generatedCode);
 
       try {
         const response = await fetch('http://localhost:3000/run-tests', {
@@ -172,12 +177,176 @@ export default {
         }
 
         const data = await response.json();
-        console.log('Test results:', data.testResults);
-        this.testResults = data.testResults;
+        this.testResults = data.testResults.join('\n');
       } catch (error) {
         console.error('Error running tests:', error);
-        this.errorMessage = "Testleri çalıştırırken bir hata oluştu. Lütfen kodun formatını kontrol edin.";
+        this.errorMessage = "Testler çalıştırılırken hata oluştu.";
       }
+    },
+    downloadCode() {
+      const blob = new Blob([this.generatedCode], { type: "text/plain;charset=utf-8" });
+      saveAs(blob, "generatedCode.ts");
+    },
+    async downloadBoilerplate() {
+      const zip = new JSZip();
+      const srcFolder = zip.folder("src");
+
+      // Add necessary boilerplate files
+      const packageJson = `
+      {
+        "name": "api-tester",
+        "version": "1.0.0",
+        "main": "index.js",
+        "license": "MIT",
+        "scripts": {
+          "start": "ts-node src/tempCode.ts"
+        },
+        "dependencies": {
+          "axios": "^0.21.1"
+        },
+        "devDependencies": {
+          "@types/node": "^14.14.37",
+          "ts-node": "^9.1.1",
+          "typescript": "^4.2.3"
+        }
+      }
+      `;
+      const tsconfigJson = `
+      {
+        "compilerOptions": {
+          "target": "es6",
+          "module": "commonjs",
+          "strict": true,
+          "esModuleInterop": true,
+          "skipLibCheck": true,
+          "forceConsistentCasingInFileNames": true
+        }
+      }
+      `;
+      const indexJs = `
+      const { exec } = require("child_process");
+      const fs = require("fs");
+      const path = require("path");
+
+      async function runCode(code) {
+          const tempTsFilePath = path.join(__dirname, "src", "tempCode.ts");
+          fs.writeFileSync(tempTsFilePath, code);
+
+          const command = \`npx ts-node --project \${path.join(__dirname, "tsconfig.json")} \${tempTsFilePath}\`;
+          return new Promise((resolve, reject) => {
+              exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
+                  try {
+                      fs.unlinkSync(tempTsFilePath);
+                  } catch (err) {
+                      console.error(\`Failed to delete temporary file: \${err.message}\`);
+                  }
+
+                  if (error) {
+                      console.error(\`Error running tests: \${stderr || error.message}\`);
+                      return reject(\`Error running tests: \${stderr || error.message}\`);
+                  }
+
+                  const results = stdout.split('\\n').filter(line => line.includes('Request to') || line.includes('Error in'));
+                  resolve(results);
+              });
+          });
+      }
+
+      module.exports = { runCode };
+      `;
+      const sendRequestsTs = `
+      import axios from 'axios';
+
+      export async function sendGetRequest(method: string, url: string, headers: Record<string, string>) {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+          let config = {
+              method: method,
+              url: url,
+              headers: headers,
+          };
+
+          try {
+              const response = await axios(config);
+              console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
+              return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
+          } catch (error) {
+              console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
+              return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
+          }
+      }
+
+      export async function sendPostRequest(method: string, url: string, headers: Record<string, string>, data: any) {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+          let config = {
+              method: method,
+              url: url,
+              headers: headers,
+              data: data
+          };
+
+          try {
+              const response = await axios(config);
+              console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
+              return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
+          } catch (error) {
+              console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
+              return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
+          }
+      }
+
+      export async function sendPutRequest(method: string, url: string, headers: Record<string, string>, data: any) {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+          let config = {
+              method: method,
+              url: url,
+              headers: headers,
+              data: data
+          };
+
+          try {
+              const response = await axios(config);
+              console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
+              return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
+          } catch (error) {
+              console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
+              return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
+          }
+      }
+
+      export async function sendDeleteRequest(method: string, url: string, headers: Record<string, string>) {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+          let config = {
+              method: method,
+              url: url,
+              headers: headers,
+          };
+
+          try {
+              const response = await axios(config);
+              console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
+              return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
+          } catch (error) {
+              console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
+              return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
+          }
+      }
+      `;
+      const tempCodeTs = this.generatedCode;
+
+      zip.file("package.json", packageJson);
+      zip.file("tsconfig.json", tsconfigJson);
+      zip.file("index.js", indexJs);
+      srcFolder.file("sendRequests.ts", sendRequestsTs);
+      srcFolder.file("tempCode.ts", tempCodeTs);
+
+      const nodeModulesCommand = `
+      mkdir -p boilerplate && cd boilerplate && npm init -y && npm install axios @types/node ts-node typescript
+      `;
+      const nodeModulesFolder = zip.folder("boilerplate");
+      nodeModulesFolder.file("install.sh", nodeModulesCommand);
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "boilerplate.zip");
     }
   }
 };
@@ -189,61 +358,71 @@ export default {
   flex-direction: column;
   height: 100vh;
 }
+
 .navbar {
-  background-color: #2c3e50;
-  padding: 10px;
   display: flex;
-  justify-content: flex-start;
   align-items: center;
+  padding: 10px;
+  background-color: #333;
+  color: #fff;
 }
-.navbar button {
-  margin-right: 10px;
-}
-.navbar span {
-  color: white;
-}
+
 .main-container {
   display: flex;
   flex: 1;
 }
+
 .controls {
-  background-color: #ecf0f1;
-  padding: 10px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  width: 250px;
+  padding: 10px;
+  background-color: #f4f4f4;
+  width: 300px;
 }
-.auth-inputs input, .buttons button {
+
+.auth-inputs input {
   margin-bottom: 10px;
+  padding: 8px;
+  width: 90%;
+}
+
+.checkboxes label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.buttons button {
+  margin-bottom: 10px;
+  padding: 8px;
   width: 100%;
 }
-.checkboxes {
-  margin-bottom: 20px;
-}
+
 .editor-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px;
+  flex: 1;
 }
+
 .code-editor {
   flex: 1;
-  margin-bottom: 10px;
 }
+
 .result-container {
   height: 200px;
-  padding: 10px;
+  background-color: #333;
+  color: #fff;
 }
+
 .results-textarea {
-  height: 100%;
-  resize: none;
   width: 100%;
-}
-.edit-toggle {
-  margin-top: 10px;
-}
-.error-message {
+  height: 100%;
+  padding: 10px;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  resize: none;
+}.error-message {
   color: red;
   margin-top: 10px;
 }

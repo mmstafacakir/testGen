@@ -2,7 +2,7 @@ import SwaggerParser = require("@apidevtools/swagger-parser");
 import { APIResponse, CLIArguments } from '../src/interfaces';
 import generateDynamicUrl from '../src/generateUrl';
 import { handleParameter } from "../src/generateValue";
-import { cliTokens, getAuthHeaders, getSecuritySchemes } from "../src/auth";
+import { getAuthHeaders, getSecuritySchemes } from "../src/auth";
 
 function getBaseUrl(api: APIResponse): string {
     if (api.servers && api.servers.length > 0) {
@@ -37,9 +37,6 @@ export async function generateDeleteAxiosCode(swaggerFilePath: string, args?: {
                         apiKey: args?.apiKey || "Need Key",
                         oAuth2: args?.oAuth2 || "Need Token"
                     };
-                    if (!args) {
-                        authTokens = await cliTokens();
-                    }
                     let headers = operation.security ? getAuthHeaders(securitySchemes, operation.security, authTokens) : {};
 
                     let queryParams: string[] = [];
@@ -106,9 +103,6 @@ export async function generateDeleteAxiosCodeFromSwagger(swaggerFilePath: string
                 apiKey: args?.apiKey || "Need Key",
                 oAuth2: args?.oAuth2 || "Need Token"
             };
-            if (!args) {
-                authTokens = await cliTokens();
-            }
 
             let headers = operation.security ? getAuthHeaders(securitySchemes, operation.security, authTokens) : {};
 
