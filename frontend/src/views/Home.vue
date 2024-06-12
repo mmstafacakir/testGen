@@ -21,7 +21,7 @@
         </div>
         <div class="buttons">
           <button @click="generateCode">Generate Code</button>
-          <button @click="runTests">Run Tests</button>
+          <button @click="runTests" :disabled="isRunningTests">Run Tests</button>
           <button @click="downloadCode">Download Code</button>
           <button @click="downloadBoilerplate">Download Boilerplate</button>
           <label class="edit-toggle">
@@ -33,7 +33,7 @@
       <div class="editor-container">
         <monaco-editor
           v-model="generatedCode"
-          language="typescript"
+          language="javascript"
           theme="vs-dark"
           :options="{ readOnly: !isEditable }"
           class="code-editor"
@@ -69,6 +69,7 @@ export default {
       testResults: "",
       selectedFile: null,
       isEditable: false,
+      isRunningTests: false, // new data property
       errorMessage: ""
     };
   },
@@ -152,12 +153,15 @@ export default {
     },
     async runTests() {
       this.errorMessage = "";
-      this.testResults = "";  // Clear test results
+      this.isRunningTests = true; // Disable the button
 
       if (!this.generatedCode) {
-        this.errorMessage = "Lütfen kodu oluşturunuz.";
+        this.testResults = "Lütfen kodu oluşturunuz."; // Show error message
+        this.isRunningTests = false; // Re-enable the button
         return;
       }
+
+      this.testResults = "running tests...";  // Show running tests message
 
       console.log("Running tests with code:", this.generatedCode);
 
@@ -173,6 +177,7 @@ export default {
         if (!response.ok) {
           const error = await response.json();
           console.error('Error in response:', error);
+          this.isRunningTests = false; // Re-enable the button
           return;
         }
 
@@ -181,6 +186,8 @@ export default {
       } catch (error) {
         console.error('Error running tests:', error);
         this.errorMessage = "Testler çalıştırılırken hata oluştu.";
+      } finally {
+        this.isRunningTests = false; // Re-enable the button
       }
     },
     downloadCode() {
@@ -223,41 +230,10 @@ export default {
         }
       }
       `;
-      const indexJs = `
-      const { exec } = require("child_process");
-      const fs = require("fs");
-      const path = require("path");
-
-      async function runCode(code) {
-          const tempTsFilePath = path.join(__dirname, "src", "tempCode.ts");
-          fs.writeFileSync(tempTsFilePath, code);
-
-          const command = \`npx ts-node --project \${path.join(__dirname, "tsconfig.json")} \${tempTsFilePath}\`;
-          return new Promise((resolve, reject) => {
-              exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
-                  try {
-                      fs.unlinkSync(tempTsFilePath);
-                  } catch (err) {
-                      console.error(\`Failed to delete temporary file: \${err.message}\`);
-                  }
-
-                  if (error) {
-                      console.error(\`Error running tests: \${stderr || error.message}\`);
-                      return reject(\`Error running tests: \${stderr || error.message}\`);
-                  }
-
-                  const results = stdout.split('\\n').filter(line => line.includes('Request to') || line.includes('Error in'));
-                  resolve(results);
-              });
-          });
-      }
-
-      module.exports = { runCode };
-      `;
       const sendRequestsTs = `
-      import axios from 'axios';
+      import axios, { Method } from 'axios';
 
-      export async function sendGetRequest(method: string, url: string, headers: Record<string, string>) {
+      export async function sendGetRequest(method: Method, url: string, headers: Record<string, string>) {
           process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
           let config = {
               method: method,
@@ -269,13 +245,13 @@ export default {
               const response = await axios(config);
               console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
               return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
-          } catch (error) {
+          } catch (error:any) {
               console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
               return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
           }
       }
 
-      export async function sendPostRequest(method: string, url: string, headers: Record<string, string>, data: any) {
+      export async function sendPostRequest(method: Method, url: string, headers: Record<string, string>, data: any) {
           process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
           let config = {
               method: method,
@@ -288,13 +264,13 @@ export default {
               const response = await axios(config);
               console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
               return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
-          } catch (error) {
+          } catch (error:any) {
               console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
               return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
           }
       }
 
-      export async function sendPutRequest(method: string, url: string, headers: Record<string, string>, data: any) {
+      export async function sendPutRequest(method: Method, url: string, headers: Record<string, string>, data: any) {
           process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
           let config = {
               method: method,
@@ -307,13 +283,13 @@ export default {
               const response = await axios(config);
               console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
               return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
-          } catch (error) {
+          } catch (error:any) {
               console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
               return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
           }
       }
 
-      export async function sendDeleteRequest(method: string, url: string, headers: Record<string, string>) {
+      export async function sendDeleteRequest(method: Method, url: string, headers: Record<string, string>) {
           process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
           let config = {
               method: method,
@@ -325,7 +301,7 @@ export default {
               const response = await axios(config);
               console.log(\`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`);
               return \`\${config.method.toUpperCase()} Request to \${config.url}: Status code \${response.status}\`;
-          } catch (error) {
+          } catch (error:any) {
               console.error(\`Error in \${config.method.toUpperCase()} Request to \${config.url}:\`, error.message);
               return \`Error in \${config.method.toUpperCase()} Request to \${config.url}: \${error.message}\`;
           }
@@ -335,15 +311,8 @@ export default {
 
       zip.file("package.json", packageJson);
       zip.file("tsconfig.json", tsconfigJson);
-      zip.file("index.js", indexJs);
       srcFolder.file("sendRequests.ts", sendRequestsTs);
       srcFolder.file("tempCode.ts", tempCodeTs);
-
-      const nodeModulesCommand = `
-      mkdir -p boilerplate && cd boilerplate && npm init -y && npm install axios @types/node ts-node typescript
-      `;
-      const nodeModulesFolder = zip.folder("boilerplate");
-      nodeModulesFolder.file("install.sh", nodeModulesCommand);
 
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "boilerplate.zip");
@@ -422,8 +391,11 @@ export default {
   color: #fff;
   border: none;
   resize: none;
-}.error-message {
+}
+
+.error-message {
   color: red;
   margin-top: 10px;
 }
 </style>
+

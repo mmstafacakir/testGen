@@ -1,5 +1,5 @@
+import { generateAllRequests } from "./backend/src/allGenerator";
 
-import { generateAllRequests } from "./generatorAxios/allGenerator";
 
 
 async function main() {

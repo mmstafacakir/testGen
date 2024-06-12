@@ -68,7 +68,7 @@ app.post("/run-tests", async (req, res) => {
   try {
     const testResults = await runCode(code);
     console.log("Test results:", testResults); // Test sonuçlarını log'lamak için
-    res.json({ testResults: testResults.split('\n') });
+    res.json({ testResults: testResults.split("\n") });
   } catch (error) {
     console.error("Error running tests:", error);
     res.status(500).json({ error: "Error running tests" });
