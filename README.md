@@ -1,6 +1,6 @@
 # Swagger Test Generator
 
-## Kullanılan Teknoloji içerikleri:
+## Technology Contents Used:
 
 1. Nodejs
 2. TypeScript
@@ -14,22 +14,22 @@
 10. Monaco Editör
 11. JSZip
 
-## Başlarken
+## Getting started:
 
-Backend dizinine gidip `npx ts-node index.js` komutu ile backend servisini ayağa kaldırın, frontend dizinine gidip `npm run serve`komutu ile frontend'i ayağa kaldırın.
+Go to the backend directory and start the backend service with the `npx ts-node index.js` command. Go to the frontend directory and start the frontend with the `npm run serve` command.
 
-### Projenin Görünümü
+### Project View
 
 ![alt text](image.png)
 
-### Proje Çalışma Mantığı
+### Project Working Logic
 
-Backend ve frontend'i ayağa kaldırdıktan sonra istediğiniz swagger dökümanını yükleyip, istediğiniz metot için ya da hepsi için test kodu oluşturabilirsiniz. Oluşturduğunuz test kodlarını çalıştırıp sonuçlarını altta bulunan texbox'ta görebilirsiniz.
+After installing the backend and frontend, you can upload the Swagger document you want and create test code for any method you want or for all of them. You can run the test codes you created and see the results in the texbox below.
 
-Download Code butonu, IDE görünümlü olan textbox'daki kodları ' _.ts_ ' dosyası olarak indirmenizi sağlıyor. Download Boilerplate butonu ise test kodlarının yalın bir şekilde çalışabileceği gerekli kodları zip formatında indiriyor. boilerplate.zip dosyasını indirdikten sonra içerisindeki dosyaları bir klasörün içersine ayıklayın ve herhangi bir IDE aracılığıyla projeyi açın.
+The Download Code button allows you to download the codes in the IDE-looking textbox as '_.ts_' file. The Download Boilerplate button downloads the necessary codes in zip format so that the test codes can run simply. After downloading the boilerplate.zip file, extract the files in a folder and open the project via any IDE.
 
-Projeyi açtıktan sonra `npm i` komutuyla package.json dosyasında tanımlanmış gerekli bağımlılıkları indirin ve ardından `npm start` komutu ile de test kodlarını çalıştırabilirsiniz. Test sonuçlarını IDE terminalinden görebilirsiniz. Ay
+After opening the project, download the necessary dependencies defined in the package.json file with the `npm i` command, and then you can run the test codes with the `npm start` command. You can see the test results from the IDE terminal. Month
 
-Ayrıca test üretme metotlarını tek başına da kullanabilirsiniz. Nasıl kullanılabileceğini görebilmeniz için deneme.ts dosyasını derleyip çalıştırınız. (swaggerFilePath parametresini kendinize göre güncelleyiniz.)
+You can also use test generation methods alone. Compile and run the trial.ts file to see how it can be used. (Update the swaggerFilePath parameter according to your needs.)
 
-**Çağırma işlemini yaparken \_await\_ sözcüğünü kullanmayı unutmayın.**
+**Don't forget to use the word \_await\_ when calling.**
